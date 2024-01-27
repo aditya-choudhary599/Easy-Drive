@@ -4,7 +4,6 @@ import { Login_page } from "./pages/Login_page.js";
 import { User_home_page } from "./pages/User_home_page.js";
 import { User_signup_page } from "./pages/User_signup_page.js";
 import { User_password_change_page } from "./pages/User_password_change_page.js";
-import { Doc_view_page } from "./pages/Document_viewer_page.js";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
