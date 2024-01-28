@@ -1,6 +1,12 @@
 import bcrypt from "bcrypt";
 import { user_model } from "../database_scripts/models/User_model.js";
 
+export const get_user_name_from_user_id = async (req, res) => {
+    const { user_id } = req.body;
+    const user_obj = await user_model.findById(user_id);
+    return res.send({ user_name: user_obj.name });
+};
+
 export const create_user = async (req, res) => {
     const { name, email_id, mobile_number, password } = req.body;
     const hashed_password = await bcrypt.hash(password, 10);

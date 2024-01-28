@@ -1,16 +1,26 @@
 import React, { Fragment, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Navbar } from "../components/Navbar.js";
 import axios from "axios"
 import options_icon from "../images/options_icon.png"
+import new_logo from "../images/new_logo.png";
+import { do_logout } from "../redux_slices/login_slice.js";
+import "../css/user_home_page_style.css";
 
 export const User_home_page = () => {
     const user_id = useSelector((state) => state.login.user_id);
+    const dispatch = useDispatch();
+
+    const [user_name, set_user_name] = useState('');
+    const [disk_usage, set_disk_usage] = useState(null);
+
     const [folder_id, set_folder_id] = useState('');
     const [parent_folder_id, set_parent_folder_id] = useState('');
+    const [current_folder_name, set_current_folder_name] = useState('');
+
     const [all_files, set_all_files] = useState([]);
     const [all_folders, set_all_folders] = useState([]);
+
     const [re_render, set_re_render] = useState(1);
 
     const navigate = useNavigate();
@@ -20,11 +30,24 @@ export const User_home_page = () => {
             const config_result = await axios.post('http://localhost:3500/get_folder_id_of_root', { user_id: user_id });
             set_parent_folder_id(config_result.data.root_folder_id);
             set_folder_id(config_result.data.root_folder_id);
+
+            const result = await axios.post('http://localhost:3500/get_user_name_from_user_id', { user_id: user_id });
+            set_user_name(result.data.user_name);
+
+            const disk_usage_response = await axios.post('http://localhost:3500/get_disk_usage_of_user', { user_id: user_id });
+            set_disk_usage(disk_usage_response.data.total_disk_usage);
         };
 
         if (!user_id) {
             return navigate("/", { replace: true });
         }
+
+        const sidebar = document.querySelector('nav');
+        const toggle = document.querySelector(".toggle");
+
+        toggle.addEventListener("click", () => {
+            sidebar.classList.toggle("close");
+        });
 
         get_initial_config();
     }, []);
@@ -41,10 +64,25 @@ export const User_home_page = () => {
             );
             set_all_files(files_response.data.all_files);
             set_all_folders(folders_response.data.all_folders);
+
+            const disk_usage_response = await axios.post('http://localhost:3500/get_disk_usage_of_user', { user_id: user_id });
+            set_disk_usage(disk_usage_response.data.total_disk_usage);
+
+            const response_2 = await axios.post('http://localhost:3500/get_folder_path_from_folder_id', { folder_id: folder_id });
+            set_current_folder_name(response_2.data.folder_path)
         };
 
         get_files_and_folder();
     }, [folder_id, re_render]);
+
+    const handle_logut = (event) => {
+        dispatch(do_logout());
+        navigate('/', { replace: true });
+    };
+
+    const handle_password_change = (event) => {
+        navigate('/change_password');
+    }
 
     const handle_back_button = async (event) => {
         const grandparent_folder_id_response = await axios.post('http://localhost:3500/get_parent_folder_id', { user_id: user_id, child_folder_id: parent_folder_id });
@@ -345,18 +383,72 @@ export const User_home_page = () => {
         newWindow.document.body.appendChild(move_or_copy_form);
     };
 
-
     return (
         <Fragment>
-            <Navbar />
-            {parent_folder_id !== folder_id ? <button onClick={handle_back_button}>Back</button> : <></>}
-            <button onClick={handle_file_upload}>
-                Upload a file
-            </button>
-            <button onClick={handle_folder_create}>
-                Create a folder
-            </button>
-            <div className="p-3 bg-dark text-white">
+            <nav className="sidebar close">
+                <header>
+                    <div className="image-text">
+                        <span className="image">
+                            <img src={new_logo} alt="" />
+                        </span>
+
+                        <div className="text logo-text">
+                            <span className="name">{user_name}</span>
+                            <span className="profession">Space used = {disk_usage}</span>
+                        </div>
+                    </div>
+
+                    <i className='bx bx-chevron-right toggle'></i>
+                </header>
+
+                <div className="menu-bar">
+                    <div className="menu">
+                        <ul className="menu-links">
+                            <li className="nav-link">
+                                <a href="#" onClick={handle_password_change}>
+                                    <i className='bx bxs-user-circle icon'></i>
+                                    <span className="text nav-text">Change Password</span>
+                                </a>
+                            </li>
+
+                            {parent_folder_id !== folder_id
+                                ? <li className="nav-link">
+                                    <a href="#" onClick={handle_back_button}>
+                                        <i className='bx bx-arrow-back icon'></i>
+                                        <span className="text nav-text">Back</span>
+                                    </a>
+                                </li>
+                                : <></>}
+
+                            <li className="nav-link">
+                                <a href="#" onClick={handle_folder_create}>
+                                    <i className='bx bx-folder-plus icon'></i>
+                                    <span className="text nav-text">Create a folder</span>
+                                </a>
+                            </li>
+
+                            <li className="nav-link">
+                                <a href="#" onClick={handle_file_upload}>
+                                    <i className='bx bx-upload icon'></i>
+                                    <span className="text nav-text">Upload files</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="bottom-content">
+                        <li className="" onClick={handle_logut}>
+                            <a href="#">
+                                <i className='bx bx-log-out icon'></i>
+                                <span className="text nav-text">Logout</span>
+                            </a>
+                        </li>
+                    </div>
+                </div>
+            </nav>
+
+            <section className="home">
+                <div className="text">PWD={current_folder_name}</div>
                 <div className="card bg-dark text-light">
                     <h2 className="card-header">Files:</h2>
                     <div className="card-body">
@@ -444,7 +536,7 @@ export const User_home_page = () => {
                         </table>
                     </div>
                 </div>
-            </div>
+            </section>
         </Fragment>
     );
 };

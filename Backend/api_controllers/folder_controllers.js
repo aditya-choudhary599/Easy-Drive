@@ -124,9 +124,13 @@ export const get_parent_folder_id = async (req, res) => {
 };
 
 export const get_folder_path_from_folder_id = async (req, res) => {
-    const { folder_id } = req.body;
-    const response = await folder_model.findById(folder_id);
-    return res.send({ folder_path: response.folder_path });
+    try {
+        const { folder_id } = req.body;
+        const response = await folder_model.findById(folder_id);
+        return res.send({ folder_path: response.folder_path });
+    } catch (error) {
+        return res.send({ folder_path: 'null' });
+    }
 };
 
 export const create_folder = async (req, res) => {
