@@ -21,6 +21,9 @@ export const User_home_page = () => {
     const [all_files, set_all_files] = useState([]);
     const [all_folders, set_all_folders] = useState([]);
 
+    const [all_shared_files, set_all_shared_files] = useState([]);
+    const [all_shared_folders, set_all_shared_folders] = useState([]);
+
     const [re_render, set_re_render] = useState(1);
 
     const navigate = useNavigate();
@@ -65,6 +68,11 @@ export const User_home_page = () => {
             set_all_files(files_response.data.all_files);
             set_all_folders(folders_response.data.all_folders);
 
+            const shared_files_response = await axios.post('http://localhost:3500/get_list_of_shared_items', { user_id: user_id, type_of_item: 'File' });
+            const shared_folders_response = await axios.post('http://localhost:3500/get_list_of_shared_items', { user_id: user_id, type_of_item: 'Folder' });
+            set_all_shared_files(shared_files_response.data.ans);
+            set_all_shared_folders(shared_folders_response.data.ans);
+
             const disk_usage_response = await axios.post('http://localhost:3500/get_disk_usage_of_user', { user_id: user_id });
             set_disk_usage(disk_usage_response.data.total_disk_usage);
 
@@ -83,6 +91,22 @@ export const User_home_page = () => {
     const handle_password_change = (event) => {
         navigate('/change_password');
     }
+
+    const handle_item_share = async (event) => {
+        const [item_id, type_of_item] = event.target.id.split('+');
+        const response_1 = await axios.post('http://localhost:3500/create_a_shared_item_entry', { source_user_id: user_id, type_of_entity: type_of_item, entity_id: item_id });
+        if (!response_1.data.message) {
+            const response_2 = await axios.post('http://localhost:3500/create_a_qr_code', response_1.data, { responseType: 'blob' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(response_2.data);
+            link.download = 'qr_code.png';
+            link.click();
+            set_re_render(re_render + 1);
+        }
+        else {
+            alert(response_1.data.message);
+        }
+    };
 
     const handle_back_button = async (event) => {
         const grandparent_folder_id_response = await axios.post('http://localhost:3500/get_parent_folder_id', { user_id: user_id, child_folder_id: parent_folder_id });
@@ -464,7 +488,16 @@ export const User_home_page = () => {
                             <tbody>
                                 {all_files.map((file) => (
                                     <tr key={file.file_id}>
-                                        <td>{file.file_name}</td>
+                                        <td>
+                                            {all_shared_files.includes(file.file_id) ? (
+                                                <span>
+                                                    <i className='bx bx-transfer icon' style={{ color: '#ffff00' }}></i>
+                                                    {file.file_name}
+                                                </span>
+                                            ) : (
+                                                file.file_name
+                                            )}
+                                        </td>
                                         <td>{file.file_size}</td>
                                         <td>{file.file_upload_on}</td>
                                         <td>
@@ -483,6 +516,12 @@ export const User_home_page = () => {
                                                     <li><a className="dropdown-item" onClick={handle_file_move_and_copy} id={`${file.file_id}+Copy`}>Copy</a></li>
 
                                                     <li><a className="dropdown-item" onClick={handle_file_move_and_copy} id={`${file.file_id}+Move`}>Move</a></li>
+
+                                                    {!all_shared_files.includes(file.file_id)
+                                                        ? <li><a className="dropdown-item" onClick={handle_item_share} id={`${file.file_id}+File`}>Share</a></li>
+                                                        : <></>
+                                                    }
+
                                                 </ul>
                                             </div>
                                         </td>
@@ -508,7 +547,14 @@ export const User_home_page = () => {
                                 {all_folders.map((folder) => (
                                     <tr key={folder.folder_id}>
                                         <td onClick={handle_folder_change} id={folder.folder_id}>
-                                            {folder.folder_name}
+                                            {all_shared_folders.includes(folder.folder_id) ? (
+                                                <span>
+                                                    <i className='bx bx-transfer icon' style={{ color: '#ffff00' }}></i>
+                                                    {folder.folder_name}
+                                                </span>
+                                            ) : (
+                                                folder.folder_name
+                                            )}
                                         </td>
                                         <td>{folder.folder_created_on}</td>
                                         <td>
@@ -527,6 +573,10 @@ export const User_home_page = () => {
                                                     <li><a className="dropdown-item" onClick={handle_folder_move_and_copy} id={`${folder.folder_id}+Copy`}>Copy</a></li>
 
                                                     <li><a className="dropdown-item" onClick={handle_folder_move_and_copy} id={`${folder.folder_id}+Move`}>Move</a></li>
+
+                                                    {!all_shared_folders.includes(folder.folder_id)
+                                                        ? <li><a className="dropdown-item" onClick={handle_item_share} id={`${folder.folder_id}+Folder`}>Share</a></li>
+                                                        : <></>}
                                                 </ul>
                                             </div>
                                         </td>

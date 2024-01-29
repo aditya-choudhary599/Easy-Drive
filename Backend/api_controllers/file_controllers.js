@@ -119,6 +119,9 @@ export const get_files_of_a_folder = async (req, res) => {
 export const download_file_by_id = async (req, res) => {
   try {
     const file_model_instance = await file_model.findById(req.body.id);
+    if (!file_model_instance) {
+      return res.send({ message: "Not able to find the file!" });
+    }
     const downloadStream = gfs.openDownloadStream(file_model_instance.file_ref_id);
     res.setHeader('Content-disposition', `attachment; filename=${file_model_instance.psudeo_file_name}`);
     res.setHeader('Content-type', 'application/octet-stream');

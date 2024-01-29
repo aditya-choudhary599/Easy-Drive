@@ -149,6 +149,11 @@ export const create_folder = async (req, res) => {
 
 export const download_a_folder_by_id = async (req, res) => {
     const { user_id, folder_id } = req.body;
+    const curr_folder_obj = await folder_model.findById(folder_id);
+
+    if (!curr_folder_obj) {
+        return res.send({ message: "Not able to find the folder" });
+    }
 
     try {
         const all_related_folders = await get_all_related_folders(user_id, folder_id);
