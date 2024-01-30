@@ -92,22 +92,6 @@ export const User_home_page = () => {
         navigate('/change_password');
     }
 
-    const handle_item_share = async (event) => {
-        const [item_id, type_of_item] = event.target.id.split('+');
-        const response_1 = await axios.post('http://localhost:3500/create_a_shared_item_entry', { source_user_id: user_id, type_of_entity: type_of_item, entity_id: item_id });
-        if (!response_1.data.message) {
-            const response_2 = await axios.post('http://localhost:3500/create_a_qr_code', response_1.data, { responseType: 'blob' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(response_2.data);
-            link.download = 'qr_code.png';
-            link.click();
-            set_re_render(re_render + 1);
-        }
-        else {
-            alert(response_1.data.message);
-        }
-    };
-
     const handle_back_button = async (event) => {
         const grandparent_folder_id_response = await axios.post('http://localhost:3500/get_parent_folder_id', { user_id: user_id, child_folder_id: parent_folder_id });
         const helper = parent_folder_id;
@@ -407,6 +391,86 @@ export const User_home_page = () => {
         newWindow.document.body.appendChild(move_or_copy_form);
     };
 
+    const handle_item_share = async (event) => {
+        const [item_id, type_of_item] = event.target.id.split('+');
+        const response_1 = await axios.post('http://localhost:3500/create_a_shared_item_entry', { source_user_id: user_id, type_of_entity: type_of_item, entity_id: item_id });
+        if (!response_1.data.message) {
+            const response_2 = await axios.post('http://localhost:3500/create_a_qr_code', response_1.data, { responseType: 'blob' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(response_2.data);
+            link.download = 'qr_code.png';
+            link.click();
+            set_re_render(re_render + 1);
+        }
+        else {
+            alert(response_1.data.message);
+        }
+    };
+
+    const handle_shared_item_download = async (event) => {
+        const newWindow = window.open('', '_blank', 'width=400,height=400');
+
+        const new_upload_form = document.createElement('form');
+        new_upload_form.method = 'post';
+        new_upload_form.enctype = 'multipart/form-data';
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.name = 'file';
+        fileInput.multiple = false;
+
+        const submitButton = document.createElement('input');
+        submitButton.type = 'submit';
+        submitButton.value = 'Upload';
+
+        new_upload_form.appendChild(fileInput);
+        new_upload_form.appendChild(submitButton);
+
+        new_upload_form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const form_data = new FormData(new_upload_form);
+
+            const response_1 = await axios.post('http://localhost:3500/decode_a_qr_code_and_get_data', form_data);
+            if (response_1.data.message) {
+                newWindow.close();
+                alert(response_1.data.message);
+            }
+            else {
+                const { source_user_id, type_of_entity, entity_id } = response_1.data._doc;
+                const { entity_name } = response_1.data;
+                if (type_of_entity === 'File') {
+                    const download_response = await axios.post(
+                        'http://localhost:3500/download_file_by_id',
+                        { id: entity_id },
+                        { responseType: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(download_response.data);
+                    link.download = entity_name;
+                    link.click();
+                }
+                else {
+                    const download_response = await axios.post('http://localhost:3500/download_a_folder_by_id', { user_id: source_user_id, folder_id: entity_id }, { responseType: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(download_response.data);
+                    link.download = entity_name + '.zip';
+                    link.click();
+                }
+                newWindow.close();
+            }
+        });
+
+        newWindow.document.body.appendChild(new_upload_form);
+    };
+
+    const handle_item_delete_share = async (event) => {
+        const entity_id = event.target.id;
+        const response_1 = await axios.post('http://localhost:3500/get_shared_entry_id_from_entity_id', { entity_id: entity_id });
+        const response_2 = await axios.post('http://localhost:3500/delete_a_shared_item_entry', { shared_item_id: response_1.data.shared_entry_id });
+        alert(response_2.data.message);
+        set_re_render(re_render + 1);
+    };
+
     return (
         <Fragment>
             <nav className="sidebar close">
@@ -455,6 +519,13 @@ export const User_home_page = () => {
                                 <a href="#" onClick={handle_file_upload}>
                                     <i className='bx bx-upload icon'></i>
                                     <span className="text nav-text">Upload files</span>
+                                </a>
+                            </li>
+
+                            <li className="nav-link">
+                                <a href="#" onClick={handle_shared_item_download}>
+                                    <i class='bx bx-qr icon'></i>
+                                    <span className="text nav-text">Download shared item</span>
                                 </a>
                             </li>
                         </ul>
@@ -519,7 +590,7 @@ export const User_home_page = () => {
 
                                                     {!all_shared_files.includes(file.file_id)
                                                         ? <li><a className="dropdown-item" onClick={handle_item_share} id={`${file.file_id}+File`}>Share</a></li>
-                                                        : <></>
+                                                        : <li><a className="dropdown-item" onClick={handle_item_delete_share} id={file.file_id}>Delete Shared Entry</a></li>
                                                     }
 
                                                 </ul>
@@ -546,16 +617,16 @@ export const User_home_page = () => {
                             <tbody>
                                 {all_folders.map((folder) => (
                                     <tr key={folder.folder_id}>
-                                        <td onClick={handle_folder_change} id={folder.folder_id}>
-                                            {all_shared_folders.includes(folder.folder_id) ? (
-                                                <span>
-                                                    <i className='bx bx-transfer icon' style={{ color: '#ffff00' }}></i>
-                                                    {folder.folder_name}
-                                                </span>
-                                            ) : (
-                                                folder.folder_name
-                                            )}
-                                        </td>
+                                        {all_shared_folders.includes(folder.folder_id) ? (
+                                            <td onClick={handle_folder_change} id={folder.folder_id}>
+                                                <i className='bx bx-transfer icon' style={{ color: '#ffff00' }}></i>
+                                                {folder.folder_name}
+                                            </td>
+                                        ) : (
+                                            <td onClick={handle_folder_change} id={folder.folder_id}>
+                                                {folder.folder_name}
+                                            </td>
+                                        )}
                                         <td>{folder.folder_created_on}</td>
                                         <td>
                                             <div className="dropdown">
@@ -576,7 +647,8 @@ export const User_home_page = () => {
 
                                                     {!all_shared_folders.includes(folder.folder_id)
                                                         ? <li><a className="dropdown-item" onClick={handle_item_share} id={`${folder.folder_id}+Folder`}>Share</a></li>
-                                                        : <></>}
+                                                        : <li><a className="dropdown-item" onClick={handle_item_delete_share} id={folder.folder_id}>Delete Share Entry</a></li>
+                                                    }
                                                 </ul>
                                             </div>
                                         </td>

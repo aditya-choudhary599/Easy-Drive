@@ -4,11 +4,19 @@ import qrcode from "qrcode";
 import { join } from "path";
 import fs from "fs";
 import { shared_item_model } from "../database_scripts/models/Shared_items_model.js";
+import { file_model } from "../database_scripts/models/File_model.js";
+import { folder_model } from "../database_scripts/models/Folder_model.js";
 
 export const get_list_of_shared_items = async (req, res) => {
     const { user_id, type_of_item } = req.body;
     const all_shared_items = await shared_item_model.find({ source_user_id: user_id, type_of_entity: type_of_item });
     return res.send({ ans: all_shared_items.map((item) => { return item.entity_id.toString() }) });
+};
+
+export const get_shared_entry_id_from_entity_id = async (req, res) => {
+    const { entity_id } = req.body;
+    const ans = await shared_item_model.findOne({ entity_id: entity_id });
+    return res.send({ shared_entry_id: ans._id });
 };
 
 export const create_a_shared_item_entry = async (req, res) => {
@@ -64,13 +72,18 @@ export const decode_a_qr_code_and_get_data = async (req, res) => {
         const decodedQR = jsQR(imageData.data, imageData.width, imageData.height);
         const decoded_data = JSON.parse(decodedQR.data);
 
-        const shared_item_obj = await shared_item_model.findById(decoded_data.new_shared_entry_id);
-        if (!shared_item_model) {
-            return res.send({ message: "No item" });
+        const shared_item_obj = await shared_item_model.findById(decoded_data.new_shared_entry_id); 
+        
+        if (shared_item_obj.type_of_entity === 'File') {
+            const helper = await file_model.findById(shared_item_obj.entity_id);
+            return res.send({ ...shared_item_obj, entity_name: helper.psudeo_file_name });
         }
-        return res.send(shared_item_obj);
+        else {
+            const helper = await folder_model.findById(shared_item_obj.entity_id);
+            const folder_path_arr = helper.folder_path.split('/');
+            return res.send({ ...shared_item_obj, entity_name: folder_path_arr[folder_path_arr.length - 1] });
+        }
     } catch (error) {
-        console.log(error);
-        return res.send("Failed");
+        return res.send({ message: "Failed" });
     }
 };
