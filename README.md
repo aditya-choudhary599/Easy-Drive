@@ -4,7 +4,6 @@ Easy Drive is a Google Drive clone developed using the MERN stack. It provides u
 
 ## Table of Contents
 
-- [Overview](#overview)
 - [Features](#features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -15,10 +14,6 @@ Easy Drive is a Google Drive clone developed using the MERN stack. It provides u
 - [Technology stack](#technology-stack)
 - [Contributing](#contributing)
 - [Contact](#contact)
-
-## Overview
-
-Easy Drive is a cloud storage application built with the MERN (MongoDB, Express.js, React, Node.js) stack. It offers user authentication, file and folder management, as well as sharing, copying, moving, and deleting functionalities.
 
 ## Features
 
