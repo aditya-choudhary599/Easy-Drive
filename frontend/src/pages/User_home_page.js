@@ -164,6 +164,12 @@ export const User_home_page = () => {
         const file_id = event.target.id;
         const response = await axios.post('http://localhost:3500/delete_file_by_id', { id: file_id });
         alert(response.data.message);
+
+        if (all_shared_files.includes(file_id)) {
+            const response_1 = await axios.post('http://localhost:3500/get_shared_entry_id_from_entity_id', { entity_id: file_id });
+            const response_2 = await axios.post('http://localhost:3500/delete_a_shared_item_entry', { shared_item_id: response_1.data.shared_entry_id });
+        }
+
         set_re_render(re_render + 1);
     };
 
@@ -342,6 +348,14 @@ export const User_home_page = () => {
         const id_of_folder_to_delete = event.target.id;
         const response = await axios.post('http://localhost:3500/delete_a_folder_by_id', { user_id: user_id, folder_id: id_of_folder_to_delete });
         alert(response.data.message);
+
+        if (all_shared_folders.includes(id_of_folder_to_delete)) {
+            const response_1 = await axios.post('http://localhost:3500/get_shared_entry_id_from_entity_id', { entity_id: id_of_folder_to_delete });
+            const response_2 = await axios.post('http://localhost:3500/delete_a_shared_item_entry', { shared_item_id: response_1.data.shared_entry_id });
+            alert(response_2.data.message);
+            set_re_render(re_render + 1);
+        }
+
         set_re_render(re_render + 1);
     };
 
